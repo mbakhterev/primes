@@ -6,7 +6,6 @@ import System.Environment
 import Data.Bits
 import Data.Int
 
--- isqrt :: (Bits a, Num a, Ord a) => a -> a
 isqrt :: Int64 -> Int64
 isqrt n = go n 0 (q `shiftR` 2)
  where
