@@ -16,7 +16,8 @@
         (begin (fxvector-set! A c n)
                (cursor-set! A (fx1+ c))
                P)
-        (begin (set-cdr! P (cons (make-page n) '()))
+        (begin ; (set-car! P (fxvector->immutable-fxvector (car P)))
+               (set-cdr! P (cons (make-page n) '()))
                (cdr P)))))
 
 (define (prime? n pages)
