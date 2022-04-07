@@ -32,19 +32,21 @@ def sieve(M, limit, p, cursor):
 def next_prime_offset(M, limit, start):
     l = vector_limit(M, limit)
     i = start + 1 + (start & 1)
-    while i <= l and M[i] == 0: i += 1
-    return i <= l and i
+    while i <= l and M[i] == 0: i += 2
+    if i <= l: return i
+    return limit + 1
 
 def optimus_primes():
     N = int(sys.argv[1])
     L = isqrt(N)
-    if L < 2:
-        return N, bytearray([0] * L), [], []
-    M = init_markvector(L)
-    p = 2
     P = []
     C = []
-    while p:
+    if L < 2:
+        M = bytearray([0] * L)
+    else:
+        M = init_markvector(L)
+    p = 2
+    while p <= L:
         P.append(p)
         C.append(sieve(M, L, p, p + p))
         p = next_prime_offset(M, L, p)
@@ -65,7 +67,7 @@ def sieve_recursor_count(N, M, P, C):
     for i in range(0, len(P)):
         p = P[i]
         c = C[i]
-        C[i] = sieve(M, M, p, c)
+        C[i] = sieve(M, N, p, c)
     return limited_sum(M, N)
 
 N, M, P, C = optimus_primes()
