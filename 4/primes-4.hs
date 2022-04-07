@@ -6,10 +6,9 @@ import System.Environment
 import Data.Bits
 import Data.Int
 import Data.Array.Base
+import Data.Array.ST
 import Control.Monad
 import Control.Monad.ST
-import Data.Array.ST
-import Debug.Trace
 
 isqrt :: Int64 -> Int64
 isqrt n = go n 0 (q `shiftR` 2)
@@ -105,5 +104,4 @@ process nN = do (aM, aP, aC) <- optimusPrimes nN
                                         else return n
                       in marksCapacity aM >>= \nL -> go nL (nN - nL) pl
 
-main = getArgs >>= (return . read . head)
-               >>= \nN -> print (runST (process nN))
+main = getArgs >>= (return . read . head) >>= \nN -> print (runST (process nN))

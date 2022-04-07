@@ -146,6 +146,10 @@ int main(int argc, char *argv[]) {
     n += sieve_recursor_count(left, &M, &P, &C);
     left -= L;
   }
+  free(M->buffer);
+  free(C->buffer);
+  free(P->buffer);
+
   printf("%ld\n", n);
   return 0;
 }
