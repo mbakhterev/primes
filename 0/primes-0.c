@@ -7,11 +7,12 @@ int is_prime(int n) {
   return 1;
 }
 
-void main() {
+int main(void) {
   int n_primes = 0;
 
   for(int n = 2; n < 250001; n++)
     n_primes += is_prime(n);
 
   printf("%d\n", n_primes);
+  return 0;
 }

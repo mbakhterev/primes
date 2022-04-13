@@ -1,27 +1,22 @@
 (define (dump v) (display v) (newline))
 
-(define (init-marks L)
-  (assert (fx> L 1))
-    (let ((B (1- (logbit1 (fx1+ L) 0))))
-      (dump B)
-      (logxor B #b11)))
+(define (make-ones L) (1- (logbit1 (fx1+ L) 0)))
 
-(define (marks-limit V L) (fxmin L (fx1- (bitwise-length V))))
+(define (init-marks L) (assert (fx> L 1)) (logxor (make-ones L) #b11))
 
-(define (sieve M limit p cursor)
-  (let ((l (marks-limit M limit)))
+(define (sieve N M L p cursor)
+  (let ((l (fxmin N L)))
     (let loop ((m M) (c cursor))
       (if (fx<= c l)
         (loop (logbit0 c m) (fx+ c p))
         (values m (fx- c l 1))))))
 
-(define (next-prime-offset M limit start)
-  (let ((l (marks-limit M limit start))
-        (s (fx+ start 1 (fxlogand start 1))))
-    (let ((p (fx+ s (bitwise-first-bit-set (bitwise-bit-field m s (fx1+ limit))))))
+(define (next-prime-offset M L start)
+  (let ((s (fx+ start 1 (fxlogand start 1))))
+    (let ((p (fx+ s (bitwise-first-bit-set (bitwise-bit-field m s (fx1+ L))))))
       (if (fxpositive? p)
         p
-        (fx1+ limit)))))
+        (fx1+ L)))))
 
 (define (count-marks M L) (bitwise-bit-count (bitwise-bit-field M 0 (fx1+ L))))
 
@@ -46,13 +41,21 @@
                (C '()))
       (if (fx<= p L)
         (let-values (((next-M c) (sieve M N p (+ p p))))
-          (loop next-M (fx1+ n) (cons p P) (cons c C)))
-        (let-values (((primes cursors) (compactify P C n)))
-          (values M primes counts))))))
+          (loop next-M
+                (next-prime-offset M L p)
+                (fx1+ n)
+                (cons p P)
+                (cons c C)))
+        (compactify P C n)))))
+
+(define (sieve-recursor-count N L P C)
+  (let ((M (one))))
+  )
 
 (define (go N)
-  (let ((M (init-marks (isqrt N))))
-      (format #t "~a ~b ~a~%" N M (bitwise-length M))
+  (let ((L (isqrt N))
+        (M (init-marks (isqrt N))))
+    (format #t "~a ~b ~a~%" N M (bitwise-length M))
     )
   )
 
