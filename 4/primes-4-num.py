@@ -1,4 +1,5 @@
 import sys
+import numpy as np
 
 def isqrt(x):
     q = 1
@@ -14,19 +15,25 @@ def isqrt(x):
 
 def init_marks(N):
     assert(N > 1)
-    M = bytearray([1] * N)
+    M = np.ones(N, np.dtype('int8'))
     M[0] = 0
     M[1] = 1
     return M
 
 def marks_limit(A, L): return min(L, len(A))
 
+# def sieve(M, N, p, c):
+#     L = marks_limit(M, N)
+#     while c < L:
+#         M[c] = 0
+#         c += p
+#     return c - L
+
 def sieve(M, N, p, c):
     L = marks_limit(M, N)
-    while c < L:
-        M[c] = 0
-        c += p
-    return c - L
+    M[c:L:p] = 0
+    r = (L - c) % p
+    return (p - r) if r != 0 else 0
 
 def next_prime_offset(M, N, start):
     L = marks_limit(M, N)
@@ -37,7 +44,7 @@ def next_prime_offset(M, N, start):
 def optimus_primes(N):
     P = []
     C = []
-    M = init_marks(N) if N >= 2 else bytearray([0] * L)
+    M = init_marks(N) if N >= 2 else np.zero(N)
     p = 2
     while p < L:
         P.append(p)
@@ -45,11 +52,8 @@ def optimus_primes(N):
         p = next_prime_offset(M, N, p)
     return M, P, C
 
-def reset(M):
-    for i in range(0, len(M)): M[i] = 1
-
 def sieve_recursor_count(N, M, P, C):
-    reset(M)
+    M[:] = 1
     for i in range(0, len(P)):
         p = P[i]
         c = C[i]
