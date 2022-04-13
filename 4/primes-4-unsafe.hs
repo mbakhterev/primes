@@ -28,8 +28,8 @@ initMarks :: Int -> ST s (Marks s)
 initMarks nN =
   if nN > 1
   then do a <- newArray (0, nN - 1) 1
-          writeArray a 0 0
-          writeArray a 1 0
+          unsafeWrite a 0 0
+          unsafeWrite a 1 0
           return a
   else error "Limit is too low"
 
@@ -46,13 +46,13 @@ marksLimit aM l = marksCapacity aM >>= return . min l
 sieve :: Marks s -> Int -> Int -> Int -> ST s Int
 sieve aM nN p cursor = marksLimit aM nN >>= go cursor
   where go c l = if c < l
-                 then writeArray aM c 0 >> go (c + p) l
+                 then unsafeWrite aM c 0 >> go (c + p) l
                  else return (c - l)
 
 nextPrimeOffset :: Marks s -> Int -> Int -> ST s Int
 nextPrimeOffset aM nN start = marksLimit aM nN >>= go (start + 1 + (start .&. 1))
   where go i l = if i < l
-                 then do v <- readArray aM i
+                 then do v <- unsafeRead aM i
                          if v == 0
                          then go (i + 2) l
                          else return i
@@ -61,7 +61,7 @@ nextPrimeOffset aM nN start = marksLimit aM nN >>= go (start + 1 + (start .&. 1)
 sumMarks :: Marks s -> Int -> ST s Int
 sumMarks aM nN = marksLimit aM nN >>= \l -> go l 0 0
   where go l i s = if i < l
-                   then readArray aM i >>= go l (i + 1) . (+ s) . fromIntegral
+                   then unsafeRead aM i >>= go l (i + 1) . (+ s) . fromIntegral
                    else return s
 
 compactify :: [Int] -> [Int] -> Int -> ST s (Primes s, Cursors s)
@@ -69,8 +69,8 @@ compactify primes cursors n = do pV <- newArray (0, n - 1) 0
                                  cV <- newArray (0, n - 1) 0
                                  go pV cV (n - 1) primes cursors
   where go pV cV i [] [] = return (pV, cV)
-        go pV cV i (p:ps) (c:cs) = do writeArray pV i p
-                                      writeArray cV i c
+        go pV cV i (p:ps) (c:cs) = do unsafeWrite pV i p
+                                      unsafeWrite cV i c
                                       go pV cV (i - 1) ps cs
 
 optimusPrimes :: Int -> ST s (Marks s, Primes s, Cursors s)
@@ -83,14 +83,14 @@ optimusPrimes nN = (if nN < 2 then newArray (0, nN) 0 else initMarks nN) >>= go 
                                   return (aM, primes, cursors)
 
 marksReset :: Marks s -> ST s ()
-marksReset aM = getBounds aM >>= mapM_ (\i -> writeArray aM i 1) . range
+marksReset aM = getBounds aM >>= mapM_ (\i -> unsafeWrite aM i 1) . range
 
 sieveRecursorCount :: Int -> Marks s -> Primes s -> Cursors s -> ST s Int
 sieveRecursorCount nN aM aP aC = marksReset aM >> primesCapacity aP >>= go 0
   where go i l = if i < l
-                 then do p <- readArray aP i
-                         c <- readArray aC i
-                         sieve aM nN p c >>= writeArray aC i
+                 then do p <- unsafeRead aP i
+                         c <- unsafeRead aC i
+                         sieve aM nN p c >>= unsafeWrite aC i
                          go (i + 1) l
                  else sumMarks aM nN;
 
