@@ -33,15 +33,8 @@ initMarks nN =
           return a
   else error "Limit is too low"
 
-
-marksCapacity :: Marks s -> ST s Int
-marksCapacity aM = getNumElements aM >>= return . fromIntegral
-
-primesCapacity :: Primes s -> ST s Int
-primesCapacity aP = getNumElements aP >>= return . fromIntegral
-
 marksLimit :: Marks s -> Int -> ST s Int
-marksLimit aM l = marksCapacity aM >>= return . min l
+marksLimit aM l = getNumElements aM >>= return . min l
 
 sieve :: Marks s -> Int -> Int -> Int -> ST s Int
 sieve aM nN p cursor = marksLimit aM nN >>= go cursor
@@ -86,7 +79,7 @@ marksReset :: Marks s -> ST s ()
 marksReset aM = getBounds aM >>= mapM_ (\i -> writeArray aM i 1) . range
 
 sieveRecursorCount :: Int -> Marks s -> Primes s -> Cursors s -> ST s Int
-sieveRecursorCount nN aM aP aC = marksReset aM >> primesCapacity aP >>= go 0
+sieveRecursorCount nN aM aP aC = marksReset aM >> getNumElements aP >>= go 0
   where go i l = if i < l
                  then do p <- readArray aP i
                          c <- readArray aC i
@@ -98,12 +91,12 @@ process :: Int -> ST s Int
 process nN =
   let nL = (isqrt nN) + 1
   in do (aM, aP, aC) <- optimusPrimes nL
-        pl <- primesCapacity aP
+        pl <- getNumElements aP
         if pl == 0
         then return 0
         else let go nL l n = if l > 0
                              then sieveRecursorCount l aM aP aC >>= go nL (l - nL) . (+ n)
                              else return n
-             in marksCapacity aM >>= \nL -> go nL ((nN + 1) - nL) pl
+             in getNumElements aM >>= \nL -> go nL ((nN + 1) - nL) pl
 
 main = getArgs >>= (return . read . head) >>= \nN -> print (runST (process nN))
