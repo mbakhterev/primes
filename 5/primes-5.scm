@@ -1,20 +1,17 @@
-(define (dump v) (display v) (newline))
+(define (make-ones N) (1- (logbit1 (fx1+ N) 0)))
 
-(define (make-ones L) (1- (logbit1 (fx1+ L) 0)))
+(define (init-marks N) (assert (fx> N 1)) (logxor (make-ones N) #b11))
 
-(define (init-marks L) (assert (fx> L 1)) (logxor (make-ones L) #b11))
-
-(define (sieve N M L p cursor)
-  (let ((l (fxmin N L)))
-    (let loop ((m M) (c cursor))
-      (if (fx< c l)
+(define (sieve N M p cursor)
+  (let loop ((m M) (c cursor))
+    (if (fx< c N)
         (loop (logbit0 c m) (fx+ c p))
-        (values m (fx- c l))))))
+        (values m (fx- c N)))))
 
 (define (next-prime-offset M N start)
   (let ((s (fx+ start 1 (fxlogand start 1))))
     (let ((p (fx+ s (bitwise-first-bit-set (bitwise-bit-field M s N)))))
-      (if (fxpositive? p) p L))))
+      (if (fxpositive? p) p N))))
 
 (define (count-marks M N) (bitwise-bit-count (bitwise-bit-field M 0 N)))
 
@@ -31,7 +28,7 @@
         (values (fxvector->immutable-fxvector prime-vector) cursor-vector)))))
 
 (define (optimus-primes N)
-  (let loop ((M (if (fx< L 2) 0 (init-marks N)))
+  (let loop ((M (if (fx< N 2) 0 (init-marks N)))
              (p 2)
              (n 0)
              (P '())
@@ -45,15 +42,27 @@
               (cons c C)))
       (compactify P C n))))
 
-(define (sieve-recursor-count N L P C)
-  (let ((M (one))))
-  )
+(define (sieve-recursor-count N P C)
+  (let ((l (fxvector-length P)))
+    (let loop ((i 0)
+               (M (make-ones N)))
+      (if (fx< i l)
+          (let ((p (fxvector-ref P i))
+                (c (fxvector-ref C i)))
+            (let-values (((next-M next-c) (sieve M N p c)))
+              (fxvector-set! C i next-c)
+              (loop (fx1+ i) next-M)))
+          (count-marks M N)))))
 
 (define (go N)
-  (let ((L (isqrt N))
-        (M (init-marks (isqrt N))))
-    (format #t "~a ~b ~a~%" N M (bitwise-length M))
-    )
-  )
+  (let ((L (fx1+ (isqrt N))))
+    (let-values (((P C) (optimus-primes L)))
+      (if (fxzero? (fxvector-length P))
+          0
+          (let loop ((n (fxvector-length P))
+                     (l (fx- (fx1+ N) L)))
+            (if (fxpositive? l)
+                (loop (fx+ n (sieve-recursor-count (fxmin l L) P C)) (fx- l L))
+                n))))))
 
-(go (string->number (cadr (command-line))))
+(display (go (string->number (cadr (command-line))))) (newline)
