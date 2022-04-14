@@ -42,10 +42,10 @@
         (begin (fxvector-set! prime-vector i (car P))
                (fxvector-set! cursor-vector i (car C))
                (loop (fx1- i) (cdr P) (cdr C)))
-        (values (fxvector->immutable-fxvector prime-vector) cursor-vector)))))
+        (values prime-vector cursor-vector)))))
 
 (define (optimus-primes N)
-  (let ((M ((if (< N 2) make-bytevector init-markvector) N)))
+  (let ((M ((if (fx< N 2) make-bytevector init-markvector) N)))
     (let loop ((p 2)
                (n 0)
                (P '())
