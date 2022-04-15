@@ -1,8 +1,8 @@
-(define (make-ones N) (1- (logbit1 (fx1+ N) 0)))
+(define (make-ones N) (1- (logbit1 N 0)))
 
 (define (init-marks N) (assert (fx> N 1)) (logxor (make-ones N) #b11))
 
-(define (sieve N M p cursor)
+(define (sieve M N p cursor) 
   (let loop ((m M) (c cursor))
     (if (fx< c N)
         (loop (logbit0 c m) (fx+ c p))
@@ -10,10 +10,16 @@
 
 (define (next-prime-offset M N start)
   (let ((s (fx+ start 1 (fxlogand start 1))))
-    (let ((p (fx+ s (bitwise-first-bit-set (bitwise-bit-field M s N)))))
-      (if (fxpositive? p) p N))))
+    (if (fx< s N)
+      (let ((bit (bitwise-first-bit-set (bitwise-bit-field M s N))))
+        (if (fxnonnegative? bit) (fx+ bit s) N))
+      N)))
 
-(define (count-marks M N) (bitwise-bit-count (bitwise-bit-field M 0 N)))
+(define (count-marks M N)
+  (let loop ((i 0) (s 0))
+    (if (fx< i N) (loop (fx1+ i) (if (logbit? i M) (fx1+ s) s)) s)))
+
+; (bitwise-bit-count (bitwise-bit-field M 0 N))
 
 (define (compactify primes cursors n)
   (let ((prime-vector (make-fxvector n))

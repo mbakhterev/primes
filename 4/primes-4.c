@@ -47,8 +47,6 @@ static void reset(const Marks *const M) {
   memset(M->buffer, 1, M->length);
 }
 
-static long marks_limit(const Marks *const M, const long L) { return min(L, M->length); }
-
 typedef struct {
   long *restrict buffer;
   long capacity;
@@ -72,27 +70,22 @@ static void push(const long v, Array *const restrict A) {
 }
 
 static long sieve(const Marks *const M, const long N, const long p, long c) {
-  const long L = marks_limit(M, N);
-  while (c < L) {
+  while (c < N) {
     M->buffer[c] = 0;
     c += p;
   }
-  return c - L;
+  return c - N;
 }
 
-static long next_prime_offset(const Marks *const A, const long N, const long start) {
-  const long L = marks_limit(A, N);
-
+static long next_prime_offset(const Marks *const M, const long N, const long start) {
   long i = start + 1 + (start & 1);
-  while (i < L && A->buffer[i] == 0) i += 2;
+  while (i < N && M->buffer[i] == 0) i += 2;
   return i;
 }
 
 static long sum(const Marks *const M, const long N) {
-  const long L = marks_limit(M, N);
-
   long s = 0;
-  for(long i = 0; i < L; i += 1) s += M->buffer[i];
+  for(long i = 0; i < N; i += 1) s += M->buffer[i];
   return s;
 }
 
@@ -141,7 +134,7 @@ int main(int argc, char *argv[]) {
 
   long l = (N + 1) - L;
   while (l > 0) {
-    n += sieve_recursor_count(l, &M, &P, &C);
+    n += sieve_recursor_count(min(l, L), &M, &P, &C);
     l -= L;
   }
   free(M.buffer);

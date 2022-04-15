@@ -20,25 +20,14 @@ def init_marks(N):
     M[1] = 1
     return M
 
-def marks_limit(A, L): return min(L, len(A))
-
-# def sieve(M, N, p, c):
-#     L = marks_limit(M, N)
-#     while c < L:
-#         M[c] = 0
-#         c += p
-#     return c - L
-
 def sieve(M, N, p, c):
-    L = marks_limit(M, N)
-    M[c:L:p] = 0
-    r = (L - c) % p
+    M[c:N:p] = 0
+    r = (N - c) % p
     return (p - r) if r != 0 else 0
 
 def next_prime_offset(M, N, start):
-    L = marks_limit(M, N)
     i = start + 1 + (start & 1)
-    while i < L and M[i] == 0: i += 2
+    while i < N and M[i] == 0: i += 2
     return i
 
 def optimus_primes(N):
@@ -69,6 +58,6 @@ else:
     n = len(P)
     l = (N + 1) - L
     while l > 0:
-        n += sieve_recursor_count(l, M, P, C)
+        n += sieve_recursor_count(min(l, L), M, P, C)
         l -= L
     print(n)

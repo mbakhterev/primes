@@ -33,36 +33,26 @@ initMarks nN =
           return a
   else error "Limit is too low"
 
-
-marksCapacity :: Marks s -> ST s Int
-marksCapacity aM = getNumElements aM >>= return . fromIntegral
-
-primesCapacity :: Primes s -> ST s Int
-primesCapacity aP = getNumElements aP >>= return . fromIntegral
-
-marksLimit :: Marks s -> Int -> ST s Int
-marksLimit aM l = marksCapacity aM >>= return . min l
-
 sieve :: Marks s -> Int -> Int -> Int -> ST s Int
-sieve aM nN p cursor = marksLimit aM nN >>= go cursor
-  where go c l = if c < l
-                 then unsafeWrite aM c 0 >> go (c + p) l
-                 else return (c - l)
+sieve aM nN p cursor = go cursor
+  where go c = if c < nN
+               then unsafeWrite aM c 0 >> go (c + p)
+               else return (c - nN)
 
 nextPrimeOffset :: Marks s -> Int -> Int -> ST s Int
-nextPrimeOffset aM nN start = marksLimit aM nN >>= go (start + 1 + (start .&. 1))
-  where go i l = if i < l
-                 then do v <- unsafeRead aM i
-                         if v == 0
-                         then go (i + 2) l
-                         else return i
-                 else return i
+nextPrimeOffset aM nN start = go (start + 1 + (start .&. 1))
+  where go i = if i < nN
+               then do v <- unsafeRead aM i
+                       if v == 0
+                       then go (i + 2)
+                       else return i
+               else return i
 
 sumMarks :: Marks s -> Int -> ST s Int
-sumMarks aM nN = marksLimit aM nN >>= \l -> go l 0 0
-  where go l i s = if i < l
-                   then unsafeRead aM i >>= go l (i + 1) . (+ s) . fromIntegral
-                   else return s
+sumMarks aM nN = go 0 0
+  where go i s = if i < nN
+                 then unsafeRead aM i >>= go (i + 1) . (+ s) . fromIntegral
+                 else return s
 
 compactify :: [Int] -> [Int] -> Int -> ST s (Primes s, Cursors s)
 compactify primes cursors n = do pV <- newArray (0, n - 1) 0
@@ -86,7 +76,7 @@ marksReset :: Marks s -> ST s ()
 marksReset aM = getBounds aM >>= mapM_ (\i -> unsafeWrite aM i 1) . range
 
 sieveRecursorCount :: Int -> Marks s -> Primes s -> Cursors s -> ST s Int
-sieveRecursorCount nN aM aP aC = marksReset aM >> primesCapacity aP >>= go 0
+sieveRecursorCount nN aM aP aC = marksReset aM >> getNumElements aP >>= go 0
   where go i l = if i < l
                  then do p <- unsafeRead aP i
                          c <- unsafeRead aC i
@@ -98,12 +88,12 @@ process :: Int -> ST s Int
 process nN =
   let nL = (isqrt nN) + 1
   in do (aM, aP, aC) <- optimusPrimes nL
-        pl <- primesCapacity aP
+        pl <- getNumElements aP
         if pl == 0
         then return 0
-        else let go nL l n = if l > 0
-                             then sieveRecursorCount l aM aP aC >>= go nL (l - nL) . (+ n)
-                             else return n
-             in marksCapacity aM >>= \nL -> go nL ((nN + 1) - nL) pl
+        else let go l n = if l > 0
+                          then sieveRecursorCount (min l nL) aM aP aC >>= go (l - nL) . (+ n)
+                          else return n
+             in go ((nN + 1) - nL) pl
 
 main = getArgs >>= (return . read . head) >>= \nN -> print (runST (process nN))

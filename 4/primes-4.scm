@@ -1,11 +1,9 @@
-(define (init-markvector N)
+(define (init-marks N)
   (assert (fx> N 1))
   (let ((M (make-bytevector N 1)))
     (bytevector-u8-set! M 0 0)
     (bytevector-u8-set! M 1 0)
     M))
-
-(define (marks-limit V N) (fxmin N (bytevector-length V)))
 
 (define (sieve! M N p cursor)
   (let loop ((c cursor))
@@ -21,10 +19,10 @@
         (loop (fx+ 2 i))
         i)))
 
-(define (sum V N)
+(define (sum M N)
   (let loop ((i 0) (s 0))
     (if (fx< i N)
-        (loop (fx1+ i) (fx+ s (bytevector-u8-ref V i)))
+        (loop (fx1+ i) (fx+ s (bytevector-u8-ref M i)))
         s)))
 
 (define (compactify primes cursors n)
@@ -40,7 +38,7 @@
         (values prime-vector cursor-vector)))))
 
 (define (optimus-primes N)
-  (let ((M ((if (fx< N 2) make-bytevector init-markvector) N)))
+  (let ((M ((if (fx< N 2) make-bytevector init-marks) N)))
     (let loop ((p 2)
                (n 0)
                (P '())
@@ -75,4 +73,5 @@
                 (loop (fx+ n (sieve-recursor-count! (fxmin L l) M P C)) (fx- l L))
                 n))))))
 
-(display (go (string->number (cadr (command-line))))) (newline)
+(display (go (string->number (cadr (command-line)))))
+(newline)
