@@ -33,9 +33,9 @@ def next_prime_offset(M, N, start):
 def optimus_primes(N):
     P = []
     C = []
-    M = init_marks(N) if N >= 2 else bytearray([0] * L)
+    M = init_marks(N) if N >= 2 else bytearray([0] * N) # ОШИБКА: вместо N было L
     p = 2
-    while p < L:
+    while p < N:
         P.append(p)
         C.append(sieve(M, N, p, p + p))
         p = next_prime_offset(M, N, p)
@@ -52,15 +52,18 @@ def sieve_recursor_count(N, M, P, C):
         C[i] = sieve(M, N, p, c)
     return sum(M[:N])
 
-N = int(sys.argv[1])
-L = isqrt(N) + 1
-M, P, C = optimus_primes(L)
-if len(P) == 0:
-    print(0)
-else:
-    n = len(P)
-    l = (N + 1) - L
-    while l > 0:
-        n += sieve_recursor_count(min(l, L), M, P, C)
-        l -= L
-    print(n)
+def go(N):
+    L = isqrt(N) + 1
+    M, P, C = optimus_primes(L)
+    if len(P) == 0:
+        print(0)
+    else:
+        n = len(P)
+        l = (N + 1) - L
+        while l > 0:
+            n += sieve_recursor_count(min(l, L), M, P, C)
+            l -= L
+        print(n)
+
+go(int(sys.argv[1]))
+

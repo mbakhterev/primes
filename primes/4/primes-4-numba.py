@@ -1,5 +1,6 @@
 import sys
 import numpy as np
+from numba import jit
 
 def isqrt(x):
     q = 1
@@ -20,6 +21,7 @@ def init_marks(N):
     M[1] = 1
     return M
 
+@jit
 def sieve(M, N, p, c):
     M[c:N:p] = 0
     r = (N - c) % p
