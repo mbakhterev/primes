@@ -1,0 +1,16 @@
+*
+
+!.gitignore
+
+!primes
+!primes/**/*.c
+!primes/**/*.py
+!primes/**/*.hs
+!primes/**/*.scm
+
+!lander
+!lander/*.c
+!lander/*.py
+!lander/*.hs
+!lander/*.scm
+!lander/*.clj
