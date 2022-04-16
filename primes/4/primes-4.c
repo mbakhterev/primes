@@ -98,7 +98,7 @@ static Marks optimus_primes(const long N, Array *const P, Array *const C) {
   long p = 2;
   while (p < N) {
     push(p, P);
-    push(sieve(&M, N, p, p + p), C);
+    push(sieve(&M, N, p, p * p), C);
     p = next_prime_offset(&M, N, p);
   }
 

@@ -39,7 +39,7 @@ def optimus_primes(N):
     p = 2
     while p < N:
         P.append(p)
-        C.append(sieve(M, N, p, p + p))
+        C.append(sieve(M, N, p, p * p))
         p = next_prime_offset(M, N, p)
     return M, P, C
 

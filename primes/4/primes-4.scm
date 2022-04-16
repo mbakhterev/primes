@@ -47,7 +47,7 @@
         (loop (next-prime-offset M N p)
               (fx1+ n)
               (cons p P)
-              (cons (sieve! M N p (+ p p)) C))
+              (cons (sieve! M N p (fx* p p)) C))
         (let-values (((primes cursors) (compactify P C n)))
           (values M primes cursors))))))
 

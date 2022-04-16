@@ -70,7 +70,7 @@ optimusPrimes :: Int64 -> ST s (Marks s, Primes s, Cursors s)
 optimusPrimes nN = (if nN < 2 then newArray (0, nN) 0 else initMarks nN) >>= go 2 0 [] []
   where go p n ps cs aM = if p < nN
                           then do np <- nextPrimeOffset aM nN p
-                                  c <- sieve aM nN p (p + p)
+                                  c <- sieve aM nN p (p * p)
                                   go np (n + 1) (p:ps) (c:cs) aM
                           else do (primes, cursors) <- compactify ps cs n
                                   return (aM, primes, cursors)
