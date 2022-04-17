@@ -19,10 +19,10 @@ def init_marks(N):
     M[1] = 0
     return M
 
-def sieve(M, N, p, c):
+def sieve(M, N, step, c):
     while c < N:
         M[c] = 0
-        c += p
+        c += step
     return c - N
 
 def next_prime_offset(M, N, start):
@@ -36,8 +36,9 @@ def optimus_primes(N):
     M = init_marks(N) if N >= 2 else bytearray([0] * N) # ОШИБКА: вместо N было L
     p = 2
     while p < N:
-        P.append(p)
-        C.append(sieve(M, N, p, p * p))
+        s = p << (p & 1)
+        P.append(s)
+        C.append(sieve(M, N, s, p * p))
         p = next_prime_offset(M, N, p)
     return M, P, C
 

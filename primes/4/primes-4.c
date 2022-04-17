@@ -69,10 +69,10 @@ static void push(const long v, Array *const restrict A) {
   A->buffer[A->cursor++] = v;
 }
 
-static long sieve(const Marks *const M, const long N, const long p, long c) {
+static long sieve(const Marks *const M, const long N, const long step, long c) {
   while (c < N) {
     M->buffer[c] = 0;
-    c += p;
+    c += step;
   }
   return c - N;
 }
@@ -97,8 +97,9 @@ static Marks optimus_primes(const long N, Array *const P, Array *const C) {
 
   long p = 2;
   while (p < N) {
-    push(p, P);
-    push(sieve(&M, N, p, p * p), C);
+    const long s = p << (p & 1);
+    push(s, P);
+    push(sieve(&M, N, s, p * p), C);
     p = next_prime_offset(&M, N, p);
   }
 

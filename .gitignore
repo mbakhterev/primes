@@ -3,7 +3,6 @@
 !.gitignore
 
 !primes
-!primes/*/
 !primes/*/*.c
 !primes/*/*.py
 !primes/*/*.hs

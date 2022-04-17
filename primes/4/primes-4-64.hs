@@ -37,9 +37,9 @@ primesCapacity :: Primes s -> ST s Int64
 primesCapacity aP = getNumElements aP >>= return . fromIntegral
 
 sieve :: Marks s -> Int64 -> Int64 -> Int64 -> ST s Int64
-sieve aM nN p cursor = go cursor
+sieve aM nN step cursor = go cursor
   where go c = if c < nN
-               then writeArray aM c 0 >> go (c + p)
+               then writeArray aM c 0 >> go (c + step)
                else return (c - nN)
 
 nextPrimeOffset :: Marks s -> Int64 -> Int64 -> ST s Int64
@@ -69,9 +69,10 @@ compactify primes cursors n = do pV <- newArray (0, n - 1) 0
 optimusPrimes :: Int64 -> ST s (Marks s, Primes s, Cursors s)
 optimusPrimes nN = (if nN < 2 then newArray (0, nN) 0 else initMarks nN) >>= go 2 0 [] []
   where go p n ps cs aM = if p < nN
-                          then do np <- nextPrimeOffset aM nN p
-                                  c <- sieve aM nN p (p * p)
-                                  go np (n + 1) (p:ps) (c:cs) aM
+                          then let s = shiftL p (fromIntegral (p .&. 1))
+                               in do np <- nextPrimeOffset aM nN p
+                                     c <- sieve aM nN s (p * p)
+                                     go np (n + 1) (s:ps) (c:cs) aM
                           else do (primes, cursors) <- compactify ps cs n
                                   return (aM, primes, cursors)
 
