@@ -8,9 +8,9 @@
 (define (sieve! M N p cursor)
   (let loop ((c cursor))
     (if (fx< c N)
-        (begin (bytevector-u8-set! M c 0)
-               (loop (fx+ c p)))
-        (fx- c N))))
+      (begin (bytevector-u8-set! M c 0)
+             (loop (fx+ c p)))
+      (fx- c N))))
 
 (define (next-prime-offset M N start)
   (let loop ((i (fx+ start 1 (fxlogand start 1))))

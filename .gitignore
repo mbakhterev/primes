@@ -3,10 +3,11 @@
 !.gitignore
 
 !primes
-!primes/**/*.c
-!primes/**/*.py
-!primes/**/*.hs
-!primes/**/*.scm
+!primes/*/
+!primes/*/*.c
+!primes/*/*.py
+!primes/*/*.hs
+!primes/*/*.scm
 
 !lander
 !lander/*.c

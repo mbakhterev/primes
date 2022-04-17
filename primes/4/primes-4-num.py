@@ -16,8 +16,7 @@ def isqrt(x):
 def init_marks(N):
     assert(N > 1)
     M = np.ones(N, np.dtype('int8'))
-    M[0] = 0
-    M[1] = 1
+    M[:2] = 0
     return M
 
 def sieve(M, N, p, c):
@@ -47,7 +46,7 @@ def sieve_recursor_count(N, M, P, C):
         p = P[i]
         c = C[i]
         C[i] = sieve(M, N, p, c)
-    return sum(M[:N])
+    return M[:N].sum()
 
 def go(N):
     L = isqrt(N) + 1
@@ -63,4 +62,3 @@ def go(N):
         print(n)
 
 go(int(sys.argv[1]))
-

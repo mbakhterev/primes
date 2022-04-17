@@ -16,7 +16,7 @@ def init_marks(N):
     assert(N > 1)
     M = bytearray([1] * N)
     M[0] = 0
-    M[1] = 1
+    M[1] = 0
     return M
 
 def sieve(M, N, p, c):
