@@ -1,0 +1,21 @@
+(define (sum S)
+  (do ((i 0 (fx1+ i))
+       (s 0 (fx+ s (bytevector-s8-ref S i))))
+    ((fx>= (bytevector-length S)) s)))
+
+(define (go N)
+  (if (fx< N 2)
+    0
+    (let* ((L (fx1+ (isqrt N)))
+           (M (fx1- (fx/ N 2)))
+           (S (make-bytevector M 1)) 
+           (idx (lambda (n) (fx/ (fx- n 3) 2))))
+      (do ((m 3 (fx+ m 2)))
+        ((fx>= m L) (fx1+ (sum S)))
+        (when (not (fxzero? (bytevector-s8-ref S (idx m))))
+          (do ((i (idx (fx* m m)) (fx+ i m)))
+            ((fx>= i M))
+            (bytevector-s8-set! S i 0)))))))
+
+(display (go (string->number (cadr (command-line)))))
+(newline)
