@@ -30,6 +30,10 @@
                       (immutable double direction)
                       section stage surface))
 
+(define-record landscape ((immutable landing-pad)
+                          (immutable l-rock) (immutable r-rock) 
+                          (immutable left-rock) (immutable right-rock) (immutable raw-surface)))
+
 (define-values (non-zero? near-zero?)
   (let ((ε 1e-10))
     (values (lambda (x) (fl< ε (flabs x)))
@@ -110,4 +114,35 @@
                       bx (up by)
                       nx ny)))))
 
+(define split-rock
+  (let* ((max-section-length 2048.0)
+         (x-split (lambda (a b)
+                   (if (fl>= max-section-length (fl- b a ))
+                     (list (cons a b))
+                     (let ((m (fl+ a (fl/ (fl- b a) 2))))
+                       (append (x-split a m) (x-split m b)))))))
+    (lambda (s)
+      (let-values (((ax bx ay by nx ny) (get s section ax bx ay by nx ny)))
+        (assert (fl> bx ax))
+        (let* ((k (fl/ (fl- by ay) (fl- bx ax)))
+               (remake (lambda (ab)
+                         (let-values (((a b) (juxt ab car cdr)))
+                           (let ((δa (fl- a ax))
+                                 (δb (fl- b ax)))
+                             (make-section a (fl+ ay (* k δa))
+                                           b (fl+ ay (* k δb))
+                                           nx ny))))))
+          (map remake (x-split ax bx)))))))
 
+(define (form-landscape surface-data)
+  (let* ((split-uplift (lambda (s) (split-section (uplift s))))
+         (points (surface-points surface-data))
+         (lz (landing-pad points)))
+    (let-values (((l-rock r-rock) (surface-shell points lz)))
+      (make-landscape lz
+                      (list->vector (apply append (map split-uplift l-rock)))
+                      (list->vector (apply append (map split-uplift r-rock)))
+                      l-rock r-rock (surface-sections points)))))
+
+(define (read-surface)
+  (let loop ((n (read))) (if (fxzero? n) '() (cons (read) (loop (fx1- n))))))
