@@ -1,3 +1,5 @@
+(define-syntax juxt (syntax-rules () ((k v p ps ...) (values (p v) (ps v) ...))))
+
 (define-syntax get
   (let ((accessors (lambda (r fs)
                      (let ((p (symbol->string (syntax->datum r))))
@@ -7,11 +9,11 @@
                             (syntax->datum fs))))))
     (lambda (x)
       (syntax-case x ()
-        ((k v r fs ...)
+        ((k v r f fs ...)
          (with-syntax (((as ...) (datum->syntax (syntax k)
-                                                (accessor (syntax r)
-                                                          (syntax (fs ...))))))
-           (syntax (values (as v) ...))))))))
+                                                (accessors (syntax r)
+                                                           (syntax (f fs ...))))))
+           (syntax (juxt v as ...))))))))
 
 (define x-max (fl- 7000.0 1.0))
 (define y-max (fl- 3000.0 1.0))
@@ -55,3 +57,36 @@
 (define (over-line? s x y) (flpositive? (normal-projection s x y)))
 (define (in-range? x s)
   (let-values (((ax bx) (get s section ax bx))) (and (fl<= ax x) (fl< x bx))))
+
+(define (drop n L) (if (and (fxpositive? n) (pair? L)) (drop (fx1- n) (cdr L)) L))
+
+(define (partition proc N k L)
+  (assert (and (fxpositive? N) (fxpositive? k)))
+  (let loop ((l L)
+             (n N)
+             (r '()))
+    (cond ((and (pair? l) (fxpositive? n)) (loop (cdr l)
+                                                 (fx1- n)
+                                                 (cons (car l) r)))
+          ((pair? l) (cons (apply proc (reverse r)) (partition N k (drop k L))))
+          (else (if (fxpositive? n) '() (list (reverse r)))))))
+
+(define (surface-points raw-numbers) (partition make-point 2 2 raw-numbers))
+
+(define (surface-sections points) (partition make-section 2 1 points))
+
+(define landing-pad
+  (let ((pad? (lambda (ab)
+                (near-zero? (fl- (point-y (car ab)) (point-y (cdr ab)))))))
+    (lambda (points)
+      (let ((lz (car (filter pad? (partition cons 2 1 points)))))
+        (assert (pair? lz))
+        (make-section (caar lz) (cdar lz))))))
+
+(define surface-shell
+  (let ((monotonize
+          (lambda )
+          )) (lambda (points lz)
+    (let-values (((ax bx) (get lz section ax bx)))
+    (let* ()
+    (lambda (points lz)))))))
