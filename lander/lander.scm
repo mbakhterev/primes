@@ -10,9 +10,10 @@
     (lambda (x)
       (syntax-case x ()
         ((k v r f fs ...)
-         (with-syntax (((as ...) (datum->syntax (syntax k)
-                                                (accessors (syntax r)
-                                                           (syntax (f fs ...))))))
+         (with-syntax (((as ...)
+                        (datum->syntax (syntax k)
+                                       (accessors (syntax r)
+                                                  (syntax (f fs ...))))))
            (syntax (juxt v as ...))))))))
 
 (define x-max (fl- 7000.0 1.0))
@@ -58,7 +59,8 @@
 (define (in-range? x s)
   (let-values (((ax bx) (get s section ax bx))) (and (fl<= ax x) (fl< x bx))))
 
-(define (drop n L) (if (and (fxpositive? n) (pair? L)) (drop (fx1- n) (cdr L)) L))
+(define (drop n L)
+  (if (and (fxpositive? n) (pair? L)) (drop (fx1- n) (cdr L)) L))
 
 (define (partition proc N k L)
   (assert (and (fxpositive? N) (fxpositive? k)))
@@ -84,9 +86,28 @@
         (make-section (caar lz) (cdar lz))))))
 
 (define surface-shell
-  (let ((monotonize
-          (lambda )
-          )) (lambda (points lz)
-    (let-values (((ax bx) (get lz section ax bx)))
-    (let* ()
-    (lambda (points lz)))))))
+  (let ((monotonize (lambda (max-y points)
+                      (if (pair? points)
+                        (let-values (((p P) (juxt points car cdr))
+                                     ((px py) (get (car points) point x y)))
+                          (cond ((fl> py max-y) (cons p (monotonize py P)))
+                                ((pair? P) (monotonize max-y P))
+                                (else (list (make-points px max-y)))))
+                        '()))))
+    (lambda (points lz)
+      (let-values (((ax bx) (get lz section ax bx)))
+        (let* ((l-points (filter (lambda (p) (fl<= (point-x p) ax)) points))
+               (r-points (filter (lambda (p) (fl>= (point-x p) bx)) points))
+               (l-shell (reverse (monotonize -inf.0 (reverse l-points))))
+               (r-shell (monotonize -inf.0 r-points)))
+          (values (surface-sections l-shell) (surface-sections r-shell)))))))
+
+(define uplift
+  (let ((up (lambda (y) (fl+ 64.0 y))))
+    (lambda (s)
+      (let-values (((ax ay bx by nx ny) (get s section ax ay bx by nx ny)))
+        (make-section ax (up ay)
+                      bx (up by)
+                      nx ny)))))
+
+

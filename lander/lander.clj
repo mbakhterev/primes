@@ -108,7 +108,7 @@
             (if (not (pos? (- b a max-section-length)))
               (list [a b])
               (let [m (+ a (/ (- b a) 2))] (concat (x-split a m) (x-split m b)))))]
-    (defn- split-rock [^geometry.Section {ax :ax bx :bx ay :ay by :by nx :nx ny :ny}]
+    (defn- split-rock [^Section {ax :ax bx :bx ay :ay by :by nx :nx ny :ny}]
       (assert (> bx ax))
       (let [k (/ (- by ay) (- bx ax))
             remake (fn [[^double a ^double b]]
