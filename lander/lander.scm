@@ -49,7 +49,7 @@
 
 (define-record stage ((immutable double x-target) (immutable double x-opposite)
                       (immutable double x-pad) (immutable double y-pad)
-                      (immutable double direction)
+                      (immutable long direction)
                       section stage surface))
 
 (define-record landscape ((immutable landing-pad)
@@ -293,6 +293,59 @@
                  (fixnum->flonum vy)
                  fuel
                  (make-control angle power))))
+
+(define control-to
+  (let* ((angle-max-delta 15)
+         (power-max-delta 1)
+         (tune-value (lambda (current goal max-delta)
+                       (let ((delta (fx- goal current)))
+                         (cond ((fx<= (fxabs delta) max-delta) goal)
+                               ((fxpositive? delta) (fx+ current max-delta))
+                               ((fxnegative? delta) (fx- current max-delta)))))))
+    (lambda (f t)
+      (let-values (((fa fp) (get f angle power))
+                   ((ta tp) (get t angle power)))
+        (make-control (tune-value fa ta angle-max-delta)
+                    (tune-value fa ta power-max-delta))))))
+
+(define-values (x-acceleration y-acceleration)
+  (let* ((M 3.711)
+         (to-radians (let ((r (fl/ (atan 1) 45.0)))
+                       (lambda (x) (fl* r (fixnum->flonum x)))))
+         (sin° (lambda (a) (sin (to-radians a))))
+         (cos° (lambda (s) (cos (to-radians a))))
+         (x-force (lambda (a p) (fl* (fixnum->flonum p) (cos° a))))
+         (y-force (lambda (a p) (fl- (fl* (fixnum->flonum p) (sin° a)) M)))
+         (to-zero (lambda (x) (if (non-zero? a) a 0.0)))
+         (A (fx- 91 -90))
+         (P 5)
+         (idx (lambda (a p) ((fx+ (fx* A p) 90 a))))
+
+         (make-table (lambda (f) (let ((T (make-flvector (fx* A P))))
+                                   (do ((p 0 (fx1+ p))) ((fx> p 4) T)
+                                     (do ((a -90 (fx1+ a))) ((fx> a 90))
+                                       (flvector-set T (idx a p) (f a p)))))))
+         (x-table (make-table x-force))
+         (y-table (make-table y-force)))
+    (values (case-lambda ((a p) (flvector-ref x-table (idx a p)))
+                         ((c) (x-acceleration (control-angle c) (control-power c))))
+            (case-lambda ((a p) (flvector-ref y-table (idx a p)))
+                         ((c) (y-acceleration (control-angle c) (control-power c)))))))
+
+(define (just-move c t l)
+  (let-values (((τ) (fixnum->flonum t))
+               ((ax ay) (juxt c x-acceleration y-acceleration))
+               ((x y vx vy fuel) (get l lander x y vx vy fuel)))
+    (make-lander (poly-2 (fl* 0.5 ax) vx x τ)
+                 (poly-2 (fl* 0.5 ax) vy y τ)
+                 (fl+ vx (fl* ax τ))
+                 (fl+ vy (fl* ay τ))
+                 (fx- fuel (fx* p t))
+                 c)))
+
+(define (fly c t l)
+  (assert (or (fx= 1 t) ()))
+  )
 
 (define read-raw
   (letrec ((read-numbers
