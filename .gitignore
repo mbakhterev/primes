@@ -16,4 +16,4 @@
 !lander/*.clj
 
 !lander/data
-!lander/*.txt
+!lander/data/*.txt

@@ -820,13 +820,13 @@
 
 (defn flatten-guide [guide] (vec (apply concat guide)))
 
-(ns Player (:gen-class) (:require [lander :as l] [geometry :as g]))
+(ns run (:gen-class) (:require [lander :as l] [geometry :as g]))
 
 (set! *warn-on-reflection* true)
 
 (defn- dump [& args] (binding [*out* *err*] (apply println args)))
-(defn- read-surface [] (let [N (read)] (doall (repeatedly (* 2 N) read))))
-(defn- read-lander [] (doall (repeatedly 7 read)))
+(defn- read-surface [r] (let [N (read r)] (doall (repeatedly (* 2 N) (fn [] (read r))))))
+(defn- read-lander [r] (doall (repeatedly 7 (fn [] (read r)))))
 
 (defn- make-guide [^lander.Lander {x :x vx :vx :as l}
                    ^geometry.Landscape scape]
@@ -927,3 +927,7 @@
         (if-let [lg (guide-loop lw g)]
           (recur lg g)))))
   (while true (println 0 4) (read-lander)))
+
+(with-open [r (clojure.java.io/reader "data/01.txt")]
+  (let [raw-surface (read-surface r)]
+    (println (g/make-landscape raw-surface))))
