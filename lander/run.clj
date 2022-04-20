@@ -929,7 +929,18 @@
           (recur lg g)))))
   (while true (println 0 4) (read-lander)))
 
-(with-open [r (java.io.PushbackReader.
-                (clojure.java.io/reader "data/01.txt"))]
-  (let [raw-surface (read-surface r)]
-    (println (g/make-landscape raw-surface))))
+(defn- read-raw [data]
+  (with-open [r (java.io.PushbackReader. (clojure.java.io/reader data))]
+    [(read-surface r) (read-lander r)]))
+
+(defn- process [data]
+  (let [[raw-surface raw-lander] (read-raw data)
+        {x :x vx :vx :as lander} (l/make-lander raw-lander)
+        landscape (g/make-landscape raw-surface)
+        stages (g/make-stages x vx landscape) ]
+    (println lander "\n")
+    (println landscape "\n")
+    (println stages)))
+
+
+(process "data/01.txt")

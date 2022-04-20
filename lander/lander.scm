@@ -1,5 +1,12 @@
-(define (dump v) (pretty-print v))
-(define (concat L) (apply append L))
+(define (dump v) (pretty-print v) (newline))
+
+(define (take-while p? l) (if (and (pair? l) (p? (car l)))
+                            (cons (car l) (take-while p? (cdr l)))
+                            '()))
+
+(define (drop-while p? l) (if (and (pair? l) (p? (car l)))
+                            (drop-while p? (cdr l))
+                            l))
 
 (define-syntax juxt (syntax-rules () ((k v p ps ...) (values (p v) (ps v) ...))))
 
@@ -19,9 +26,17 @@
                                                   (syntax (f fs ...))))))
            (syntax (juxt v as ...))))))))
 
+
 (define-syntax ref
-  (sytax-rules ()
-    ((k v f fs ...) (values (vector-ref v f) (vector-ref v fs) ...))))
+  (let ((accessor (lambda (t)
+                    (string->symbol
+                      (string-append (symbol->string (syntax->datum t))
+                                     "-ref")))))
+    (lambda (x)
+      (syntax-case x ()
+        ((k v t f fs ...)
+         (with-syntax ((a (datum->syntax (syntax k) (accessor (syntax t)))))
+           (syntax (values (a v f) (a v fs) ...))))))))
 
 (define x-max (fl- 7000.0 1.0))
 (define y-max (fl- 3000.0 1.0))
@@ -94,7 +109,7 @@
   (let ((pad? (lambda (ab)
                 (near-zero? (fl- (point-y (car ab)) (point-y (cdr ab)))))))
     (lambda (points)
-      (let ((lz (car (filter pad? (partition cons 2 1 points)))))
+      (let ((lz (find pad? (partition cons 2 1 points))))
         (assert (pair? lz))
         (form-section (car lz) (cdr lz))))))
 
@@ -144,14 +159,14 @@
                                            nx ny))))))
           (map remake (x-split ax bx)))))))
 
-(define (form-landscape surface-data)
+(define (form-landscape raw-numbers)
   (let* ((split-uplift (lambda (s) (split-rock (uplift s))))
-         (points (surface-points surface-data))
+         (points (surface-points (map fixnum->flonum raw-numbers)))
          (lz (landing-pad points)))
     (let-values (((l-rock r-rock) (surface-shell points lz)))
       (make-landscape lz
-                      (list->vector (concat (map split-uplift l-rock)))
-                      (list->vector (concat (map split-uplift r-rock)))
+                      (apply append (map split-uplift l-rock))
+                      (apply append (map split-uplift r-rock))
                       l-rock r-rock (surface-sections points)))))
 
 (define (poly-2 a b c x) (fl+ c (fl* x (fl+ b (fl* x a)))))
@@ -174,8 +189,8 @@
       +inf.0))
 
 (define (time-to-intersect-2d x-params y-params s)
-  (let-values (((ax vx x) (ref x-params 0 1 2))
-               ((ay vy y) (ref y-params 0 1 2))
+  (let-values (((ax vx x) (ref x-params vector 0 1 2))
+               ((ay vy y) (ref y-params vector 0 1 2))
                ((x0 y0 nx ny) (get s section ax ay nx ny)))
     (let ((a (fl* 0.5 (fl+ (fl* nx ax) (fl* ny ay))))
           (b (fl+ (fl* nx vx) (fl* ny vy)))
@@ -190,20 +205,20 @@
     (if (flnonnegative? t) t +inf.0)))
 
 (define (make-stages x vx L)
-  (let-values (((l-rock r-rock pad) (get L landscape l-rock r-rock pad)))
+  (let-values (((l-rock r-rock pad) (get L landscape l-rock r-rock landing-pad)))
     (let ((rock (if (fl< x (section-ax pad)) l-rock r-rock)))
-      (concat (reverse-stage x vx pad rock)
+      (append (reverse-stage x vx pad rock)
               (hover-stages x vx pad rock)
               (brake-stage x vx pad)
               (descend-stage x pad)))))
 
 (define (brake-stage x vx pad)
   (let-values (((ax py bx) (get pad section ax ay bx)))
-    (if (not (and (flzero? vx) (in-range x pad)))
+    (if (not (and (flzero? vx) (in-range? x pad)))
       (let* ((dir (if (or (fl< x ax) (fl< 0.0 vx)) 1.0 -1.0))
              (px (if (flpositive? dir) bx ax))
              (ox (if (flpositive? dir) ax bx)))
-        (list (make-stage px ox px py dir pad #:brake '())))
+        (list (make-stage px ox px py dir pad 'brake '#())))
       '())))
 
 (define (need-to-reverse? x vx s)
@@ -219,27 +234,84 @@
                (let-values (((ax bx) (get s section ax bx)))
                  (and (fl< x bx bx-pad)
                       (or going-ok? (fl< x ax))
-                      (make-stage bx ax bx-pad y-pad 1.0 s #:hover '())))))
+                      (make-stage bx ax bx-pad y-pad 1.0 s 'hover '#())))))
            (on-right
              (lambda (s)
                (let-values (((ax bx) (get s section ax bx)))
+                 (dump (list (list x ax ax-pad) going-ok? (list x bx)))
                  (and (fl> x ax ax-pad)
                       (or going-ok? (fl> x bx))
-                      (make-stage ax bx ax-pad y-pad -1.0 s #:hover '()))))))
+                      (make-stage ax bx ax-pad y-pad -1.0 s 'hover '#()))))))
       (cond
-        ((fl> x ax-pad) (filter stage? (map on-left rock)))
-        ((fl< x bx-pad) (filter stage? (map on-right (reverse rock))))
+        ((fl< x ax-pad) (filter stage? (map on-left rock)))
+        ((fl> x bx-pad) (filter stage? (map on-right (reverse rock))))
         (else '())))))
 
 (define (reverse-stage x vx pad rock)
   (let-values (((ax-pad y-pad bx-pad) (get pad section ax ay bx)))
+    (if (need-to-reverse? x vx pad)
+      (let* ((dir (if (fl< x ax-pad) 1.0 -1.0))
+             (s (find (lambda (s) (in-range? x s)) rock))
+             (surface (if (flpositive? dir)
+                        (take-while (lambda (r) (fl<= (section-ax r) x)) rock)
+                        (drop-while (lambda (r) (fl<= (section-bx r) x)) rock))))
+        (let-values (((ax bx) (get s section ax bx)))
+          (list (make-stage
+                  (if (flpositive? dir) bx ax) (if (flpositive? dir) 0.0 x-max)
+                  (if (flpositive? dir) bx-pad ax-pad) y-pad
+                  dir
+                  s
+                  'reverse
+                  (list->vector surface)))))
+      '())))
 
-    )
-  )
+(define (descend-stage x pad)
+  (let-values (((ax-pad y-pad bx-pad) (get pad section ax ay bx)))
+    (let* ((dir (if (fl< x ax-pad) 1.0 -1.0))
+           (tx-pad (if (flpositive? dir) bx-pad ax-pad))
+           (ox-pad (if (flpositive? dir) ax-pad bx-pad)))
+      (list (make-stage tx-pad ox-pad tx-pad y-pad dir pad 'descend '#())))))
 
-(define (read-surface)
-  (let loop ((n (fx* 2 (read))))
-    (if (fxzero? n) '() (cons (fixnum->flonum (read)) (loop (fx1- n))))))
+(define-record control ((immutable long angle) (immutable long power)))
 
-(define raw-surface (with-input-from-file "data/01.txt" read-surface))
-(dump (form-landscape raw-surface)) 
+(define-record lander ((immutable double x) (immutable double y)
+                       (immutable double vx) (immutable double vy)
+                       (immutable long fuel)
+                       (immutable control)))
+
+(define-record move ((immutable state) (immutable double dt)))
+
+(define-record constraint ((immutable double x)
+                           (immutable double h)
+                           (immutable double t)))
+
+(define (form-lander raw-numbers)
+  (let-values (((x y vx vy fuel angle power) (ref raw-numbers list 0 1 2 3 4 5 6)))
+    (make-lander (fixnum->flonum x)
+                 (fixnum->flonum y)
+                 (fixnum->flonum vx)
+                 (fixnum->flonum vy)
+                 fuel
+                 (make-control angle power))))
+
+(define read-raw
+  (letrec ((read-numbers
+             (lambda (n)
+               (if (fxzero? n) '() (cons (read) (read-numbers (fx1- n)))))))
+    (lambda (data)
+      (with-input-from-file
+        data
+        (lambda () (let* ((s (read-numbers (fx* 2 (read))))
+                          (l (read-numbers 7)))
+                     (values s l)))))))
+
+(define (process data)
+  (let-values (((raw-surface raw-lander) (read-raw data)))
+    (let ((lander (form-lander raw-lander))
+          (landscape (form-landscape raw-surface)))
+      (dump lander) 
+      (dump landscape) 
+      (let-values (((x vx) (get lander lander x vx)))
+        (dump (make-stages x vx landscape))))))
+
+(process "data/01.txt")
