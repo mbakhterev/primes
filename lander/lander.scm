@@ -1,4 +1,5 @@
 (define (dump v) (pretty-print v))
+(define (concat L) (apply append L))
 
 (define-syntax juxt (syntax-rules () ((k v p ps ...) (values (p v) (ps v) ...))))
 
@@ -38,7 +39,8 @@
 
 (define-record landscape ((immutable landing-pad)
                           (immutable l-rock) (immutable r-rock) 
-                          (immutable left-rock) (immutable right-rock) (immutable raw-surface)))
+                          (immutable left-rock) (immutable right-rock)
+                          (immutable raw-surface)))
 
 (define-values (non-zero? near-zero?)
   (let ((ε 1e-10))
@@ -148,8 +150,8 @@
          (lz (landing-pad points)))
     (let-values (((l-rock r-rock) (surface-shell points lz)))
       (make-landscape lz
-                      (list->vector (apply append (map split-uplift l-rock)))
-                      (list->vector (apply append (map split-uplift r-rock)))
+                      (list->vector (concat (map split-uplift l-rock)))
+                      (list->vector (concat (map split-uplift r-rock)))
                       l-rock r-rock (surface-sections points)))))
 
 (define (poly-2 a b c x) (fl+ c (fl* x (fl+ b (fl* x a)))))
@@ -187,7 +189,7 @@
   (let ((t (fl/ (fl- v-target v) a)))
     (if (flnonnegative? t) t +inf.0)))
 
-(define (make-stage x vx L)
+(define (make-stages x vx L)
   (let-values (((l-rock r-rock pad) (get L landscape l-rock r-rock pad)))
     (let ((rock (if (fl< x (section-ax pad)) l-rock r-rock)))
       (concat (reverse-stage x vx pad rock)
@@ -205,7 +207,34 @@
       '())))
 
 (define (need-to-reverse? x vx s)
-  (let-values (((ax bx) (get s section ax-pad bx-pad))))
+  (let-values (((ax-pad bx-pad) (get s section ax bx)))
+    (or (and (fl< x ax-pad) (fl< vx 0.0))
+        (and (fl> x bx-pad) (fl> vx 0.0)))))
+
+(define (hover-stages x vx pad rock)
+  (let-values (((ax-pad y-pad bx-pad) (get pad section ax ay bx)))
+    (let* ((going-ok? (not (need-to-reverse? x vx pad)))
+           (on-left
+             (lambda (s)
+               (let-values (((ax bx) (get s section ax bx)))
+                 (and (fl< x bx bx-pad)
+                      (or going-ok? (fl< x ax))
+                      (make-stage bx ax bx-pad y-pad 1.0 s #:hover '())))))
+           (on-right
+             (lambda (s)
+               (let-values (((ax bx) (get s section ax bx)))
+                 (and (fl> x ax ax-pad)
+                      (or going-ok? (fl> x bx))
+                      (make-stage ax bx ax-pad y-pad -1.0 s #:hover '()))))))
+      (cond
+        ((fl> x ax-pad) (filter stage? (map on-left rock)))
+        ((fl< x bx-pad) (filter stage? (map on-right (reverse rock))))
+        (else '())))))
+
+(define (reverse-stage x vx pad rock)
+  (let-values (((ax-pad y-pad bx-pad) (get pad section ax ay bx)))
+
+    )
   )
 
 (define (read-surface)
