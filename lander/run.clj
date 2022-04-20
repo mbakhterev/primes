@@ -22,11 +22,9 @@
 ; не приходилось многократно пересчитывать эти подъём и разбиение в самых неподходящих местах кода
 
 (defrecord Landscape [^Section landing-pad
-                      left-rock
-                      right-rock
                       l-rock
                       r-rock
-                      raw-surface])
+                      left-rock right-rock raw-surface])
 
 ; Структура Stage описывает стадию полёта над сегментом поверхности section к
 ; цели x-target. Противоположный от цели конец сегмента x-opposite. Значения y-pad
@@ -123,10 +121,10 @@
   (let [points (surface-points surface-data)
         pad (landing-pad points)
         [l-rock r-rock] (surface-shell points pad)]
-    (->Landscape pad l-rock r-rock
+    (->Landscape pad 
                  (mapcat split-rock (map uplift l-rock))
                  (mapcat split-rock (map uplift r-rock))
-                 (surface-sections points))))
+                 l-rock r-rock (surface-sections points))))
 
 (defn poly-2 ^double [^double a ^double b ^double c ^double x]
   (+ c (* x (+ b (* x a)))))
@@ -825,7 +823,10 @@
 (set! *warn-on-reflection* true)
 
 (defn- dump [& args] (binding [*out* *err*] (apply println args)))
-(defn- read-surface [r] (let [N (read r)] (doall (repeatedly (* 2 N) (fn [] (read r))))))
+
+(defn- read-surface [r]
+  (let [N (read r)] (doall (repeatedly (* 2 N) (fn [] (read r))))))
+
 (defn- read-lander [r] (doall (repeatedly 7 (fn [] (read r)))))
 
 (defn- make-guide [^lander.Lander {x :x vx :vx :as l}
@@ -928,6 +929,7 @@
           (recur lg g)))))
   (while true (println 0 4) (read-lander)))
 
-(with-open [r (clojure.java.io/reader "data/01.txt")]
+(with-open [r (java.io.PushbackReader.
+                (clojure.java.io/reader "data/01.txt"))]
   (let [raw-surface (read-surface r)]
     (println (g/make-landscape raw-surface))))

@@ -1,3 +1,5 @@
+(define (dump v) (pretty-print v) (newline))
+
 (define-syntax juxt (syntax-rules () ((k v p ps ...) (values (p v) (ps v) ...))))
 
 (define-syntax get
@@ -74,12 +76,13 @@
     (cond ((and (pair? l) (fxpositive? n)) (loop (cdr l)
                                                  (fx1- n)
                                                  (cons (car l) r)))
-          ((pair? l) (cons (apply proc (reverse r)) (partition N k (drop k L))))
-          (else (if (fxpositive? n) '() (list (reverse r)))))))
+          ((pair? l) (cons (apply proc (reverse r))
+                           (partition proc N k (drop k L))))
+          (else (if (fxpositive? n) '() (list (apply proc (reverse r))))))))
 
 (define (surface-points raw-numbers) (partition make-point 2 2 raw-numbers))
 
-(define (surface-sections points) (partition make-section 2 1 points))
+(define (surface-sections points) (partition form-section 2 1 points))
 
 (define landing-pad
   (let ((pad? (lambda (ab)
@@ -87,17 +90,18 @@
     (lambda (points)
       (let ((lz (car (filter pad? (partition cons 2 1 points)))))
         (assert (pair? lz))
-        (make-section (caar lz) (cdar lz))))))
+        (form-section (car lz) (cdr lz))))))
 
 (define surface-shell
-  (let ((monotonize (lambda (max-y points)
-                      (if (pair? points)
-                        (let-values (((p P) (juxt points car cdr))
-                                     ((px py) (get (car points) point x y)))
-                          (cond ((fl> py max-y) (cons p (monotonize py P)))
-                                ((pair? P) (monotonize max-y P))
-                                (else (list (make-points px max-y)))))
-                        '()))))
+  (letrec ((monotonize
+             (lambda (max-y points)
+               (if (pair? points)
+                 (let-values (((p P) (juxt points car cdr))
+                              ((px py) (get (car points) point x y)))
+                   (cond ((fl> py max-y) (cons p (monotonize py P)))
+                         ((pair? P) (monotonize max-y P))
+                         (else (list (make-point px max-y)))))
+                 '()))))
     (lambda (points lz)
       (let-values (((ax bx) (get lz section ax bx)))
         (let* ((l-points (filter (lambda (p) (fl<= (point-x p) ax)) points))
@@ -135,7 +139,7 @@
           (map remake (x-split ax bx)))))))
 
 (define (form-landscape surface-data)
-  (let* ((split-uplift (lambda (s) (split-section (uplift s))))
+  (let* ((split-uplift (lambda (s) (split-rock (uplift s))))
          (points (surface-points surface-data))
          (lz (landing-pad points)))
     (let-values (((l-rock r-rock) (surface-shell points lz)))
@@ -145,4 +149,8 @@
                       l-rock r-rock (surface-sections points)))))
 
 (define (read-surface)
-  (let loop ((n (read))) (if (fxzero? n) '() (cons (read) (loop (fx1- n))))))
+  (let loop ((n (fx* 2 (read))))
+    (if (fxzero? n) '() (cons (fixnum->flonum (read)) (loop (fx1- n))))))
+
+(define raw-surface (with-input-from-file "data/01.txt" read-surface))
+(dump (form-landscape raw-surface)) 
