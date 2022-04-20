@@ -1,4 +1,4 @@
-(define (dump v) (pretty-print v) (newline))
+(define (dump v) (pretty-print v))
 
 (define-syntax juxt (syntax-rules () ((k v p ps ...) (values (p v) (ps v) ...))))
 
@@ -17,6 +17,10 @@
                                        (accessors (syntax r)
                                                   (syntax (f fs ...))))))
            (syntax (juxt v as ...))))))))
+
+(define-syntax ref
+  (sytax-rules ()
+    ((k v f fs ...) (values (vector-ref v f) (vector-ref v fs) ...))))
 
 (define x-max (fl- 7000.0 1.0))
 (define y-max (fl- 3000.0 1.0))
@@ -147,6 +151,62 @@
                       (list->vector (apply append (map split-uplift l-rock)))
                       (list->vector (apply append (map split-uplift r-rock)))
                       l-rock r-rock (surface-sections points)))))
+
+(define (poly-2 a b c x) (fl+ c (fl* x (fl+ b (fl* x a)))))
+
+(define (positive-root-of-square-equation a b c)
+  (or (if (flzero? a)
+        (and (not (flzero? b))
+             (let ((t (fl/ (fl- c) b)))
+               (and (flpositive? t) t)))
+        (let ((D (fl- (fl* b b) (fl* 4.0 a c))))
+          (and (flnonnegative? D)
+               (let* ((D-sqrt (sqrt D))
+                      (a-rcpr (fl/ 0.5 a)) ; 1/(2a)
+                      (tp (fl* (fl+ (fl- b) D-sqrt) a-rcpr))
+                      (tm (fl* (fl- (fl- b) D-sqrt) a-rcpr))
+                      (t-max (max tp tm))
+                      (t-min (min tp tm)))
+                 (or (and (flpositive? t-min) t-min)
+                     (and (flpositive? t-max) t-max))))))
+      +inf.0))
+
+(define (time-to-intersect-2d x-params y-params s)
+  (let-values (((ax vx x) (ref x-params 0 1 2))
+               ((ay vy y) (ref y-params 0 1 2))
+               ((x0 y0 nx ny) (get s section ax ay nx ny)))
+    (let ((a (fl* 0.5 (fl+ (fl* nx ax) (fl* ny ay))))
+          (b (fl+ (fl* nx vx) (fl* ny vy)))
+          (c (fl+ (fl* nx (fl- x x0)) (fl* ny (fl- y y0)))))
+      (positive-root-of-square-equation a b c))))
+
+(define (time-to-intersect-1d ax vx x tx)
+  (positive-root-of-square-equation (fl* 0.5 ax) vx (fl- x tx)))
+
+(define (time-to-speed a v v-target)
+  (let ((t (fl/ (fl- v-target v) a)))
+    (if (flnonnegative? t) t +inf.0)))
+
+(define (make-stage x vx L)
+  (let-values (((l-rock r-rock pad) (get L landscape l-rock r-rock pad)))
+    (let ((rock (if (fl< x (section-ax pad)) l-rock r-rock)))
+      (concat (reverse-stage x vx pad rock)
+              (hover-stages x vx pad rock)
+              (brake-stage x vx pad)
+              (descend-stage x pad)))))
+
+(define (brake-stage x vx pad)
+  (let-values (((ax py bx) (get pad section ax ay bx)))
+    (if (not (and (flzero? vx) (in-range x pad)))
+      (let* ((dir (if (or (fl< x ax) (fl< 0.0 vx)) 1.0 -1.0))
+             (px (if (flpositive? dir) bx ax))
+             (ox (if (flpositive? dir) ax bx)))
+        (list (make-stage px ox px py dir pad #:brake '())))
+      '())))
+
+(define (need-to-reverse? x vx s)
+  (let-values (((ax bx) (get s section ax-pad bx-pad))))
+  )
 
 (define (read-surface)
   (let loop ((n (fx* 2 (read))))
