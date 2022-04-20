@@ -82,8 +82,8 @@
     (fl+ (fl* nx (fl- tx x))
          (fl* ny (fl- ty y)))))
 
-(define (over-line? s x y) (flpositive? (normal-projection s x y)))
-(define (in-range? x s)
+(define (xy-over-line? s x y) (flpositive? (normal-projection s x y)))
+(define (x-in-range? s x)
   (let-values (((ax bx) (get s section ax bx))) (and (fl<= ax x) (fl< x bx))))
 
 (define (drop n L)
@@ -214,7 +214,7 @@
 
 (define (brake-stage x vx pad)
   (let-values (((ax py bx) (get pad section ax ay bx)))
-    (if (not (and (flzero? vx) (in-range? x pad)))
+    (if (not (and (flzero? vx) (x-in-range? pad x)))
       (let* ((dir (if (or (fl< x ax) (fl< 0.0 vx)) 1.0 -1.0))
              (px (if (flpositive? dir) bx ax))
              (ox (if (flpositive? dir) ax bx)))
@@ -251,7 +251,7 @@
   (let-values (((ax-pad y-pad bx-pad) (get pad section ax ay bx)))
     (if (need-to-reverse? x vx pad)
       (let* ((dir (if (fl< x ax-pad) 1.0 -1.0))
-             (s (find (lambda (s) (in-range? x s)) rock))
+             (s (find (lambda (s) (x-in-range? s x)) rock))
              (surface (if (flpositive? dir)
                         (take-while (lambda (r) (fl<= (section-ax r) x)) rock)
                         (drop-while (lambda (r) (fl<= (section-bx r) x)) rock))))
@@ -273,6 +273,13 @@
       (list (make-stage tx-pad ox-pad tx-pad y-pad dir pad 'descend '#())))))
 
 (define-record control ((immutable long angle) (immutable long power)))
+
+(record-type-equal-procedure
+  (record-type-descriptor control)
+  (lambda (c1 c2 e?)
+    (let-values (((a1 p1) (get c1 control angle power))
+                 ((a2 p2) (get c2 control angle power)))
+      (and (fx= a1 a2) (fx= p1 p2)))))
 
 (define-record lander ((immutable double x) (immutable double y)
                        (immutable double vx) (immutable double vy)
@@ -343,9 +350,26 @@
                  (fx- fuel (fx* p t))
                  c)))
 
-(define (fly c t l)
-  (assert (or (fx= 1 t) ()))
-  )
+(define (move c-target t l)
+  (let ((c (lander-control l)))
+    (assert (or (fx= 1 t) (equal? c c-target)))
+    (just-move (control-to c c-target) t l)))
+
+(define (in-range? l s) (x-in-range? s (lander-x l)))
+(define (over-line? l s) (xy-over-line? s (lander-x l) (lander-y l)))
+(define (over-section? l s) (and (in-range? l s) (over-line? l s)))
+(define (on-radar l)
+  (let-values (((x y) (get l lander x y))) (and (<= 0 x x-max) (<= 0 y y-max))))
+
+(define (alive surface l)
+  (and (on-rader? l)
+       (over-line? l (find (lambda (s) (in-range? l s))) surface)))
+
+(define-values (reserve-dx reserve-dh)
+  (let ((dx-reserve 0.125)
+        (dh-reserve 0.125))
+    (values (lambda (x) (fl+ x (fl* x dx-reserve)))
+            (lambda (h) (fl+ h (fl* h dh-reserve))))))
 
 (define read-raw
   (letrec ((read-numbers
